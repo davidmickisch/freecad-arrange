@@ -1,13 +1,11 @@
 import FreeCAD
 
-"""
 def placeObjsOnPlate(objs):
     for obj in objs:
         base = obj.Placement.Base
         boundingBox = obj.Shape.BoundBox
         lowerEnd = boundingBox.ZMin
         obj.Placement.Base = FreeCAD.Vector(base[0], base[1], base[2] - lowerEnd)
-"""
 
 class Extruder:
     class ExtrusionPoint:
@@ -43,16 +41,14 @@ class Plate:
     def place_obj(self, obj, extruder):
         #get relevant information from obj
         bounding_box = obj.Shape.BoundBox
-        #print(obj)
-        #x_obj_dim = obj.Shape.BoundBox.XLength
         x_obj_dim = bounding_box.XLength
         y_obj_dim = bounding_box.YLength
         base      = obj.Placement.Base
 
         #determine offsets
-        safety_factor = 1.0
-        x_column_spacing = extruder.extrusionPt.x_pos * safety_factor
-        y_row_spacing    = extruder.extrusionPt.y_pos * safety_factor
+        safety_offset = 5
+        x_column_spacing = extruder.extrusionPt.x_pos + safety_offset
+        y_row_spacing    = extruder.extrusionPt.y_pos + safety_offset
 
         y_bound_placed_objs = [placed.Shape.BoundBox.YMax for placed in self.placed_objs]
         y_bound_placed_objs.append(0)
@@ -60,13 +56,13 @@ class Plate:
 
         #change x_scan_pos and y_scan_pos if needed
         x_scan_pos_next = self.x_scan_pos + x_column_spacing + x_obj_dim
-        if x_scan_pos_next > self.y_dim:
+        if x_scan_pos_next > self.x_dim:
             self.x_scan_pos = 0
             x_scan_pos_next = self.x_scan_pos + x_column_spacing + x_obj_dim
             self.y_scan_pos = y_max_placed_objs + y_row_spacing
 
         #return if obj doesn't fit on plate
-        if self.y_scan_pos + y_obj_dim > plate.y_dim:
+        if self.y_scan_pos + y_obj_dim > self.y_dim:
             return "Error: " + str(obj) + "doesn't fit on plate!"
 
         #place obj by translating
@@ -78,6 +74,7 @@ class Plate:
 
         self.placed_objs.append(obj)
 
+        y_max_placed_objs = max(y_max_placed_objs, obj.Shape.BoundBox.YMax)
         #update scan positions
         self.x_scan_pos = x_scan_pos_next
         self.y_scan_pos = max(y_max_placed_objs - (extruder.y_dim - extruder.extrusionPt.y_pos), self.y_scan_pos) #constraint coming from Printer's x-axis bar
@@ -90,6 +87,7 @@ def arrange_objs(objs, plate, extruder):
         ret_str = plate.place_obj(obj, extruder)
         print(ret_str)
 
+        #maybe return objects that couldn't be placed
         if ret_str[-1] == "!":
             return
 
@@ -104,8 +102,8 @@ def read_conf(conf_file_name):
     extruder_conf = conf_obj["extruder"]
     extrusion_pt_conf = extruder_conf["extrusion_pt"]
 
-    plate = Plate(x_dim=plate_conf["x_dim"], y_dim=plate_conf["y_dim"])
-    extruder = Extruder(x_dim=extruder_conf["x_dim"], y_dim=extruder_conf["y_dim"], x_pos=extrusion_pt_conf["x_pos"], y_pos = extrusion_pt_conf["y_pos"])
+    plate = Plate(x_dim = plate_conf["x_dim"], y_dim = plate_conf["y_dim"])
+    extruder = Extruder(x_dim = extruder_conf["x_dim"], y_dim = extruder_conf["y_dim"], x_pos = extrusion_pt_conf["x_pos"], y_pos = extrusion_pt_conf["y_pos"])
     return (plate, extruder)
 
 
@@ -122,5 +120,8 @@ def printObjsBoundingBox(objs):
 
 printObjsBase(objs)
 plate, extruder = read_conf("/home/david/.FreeCAD/Macro/arrangeCnf.json")
+
 #TODO
-#write config parser
+#Exception Handling
+#Clear Objs
+#do testing (e.g. for connectors)
