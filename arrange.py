@@ -119,7 +119,8 @@ def printObjsBoundingBox(objs):
         print(obj.Shape.BoundBox)
 
 printObjsBase(objs)
-plate, extruder = read_conf("/home/david/.FreeCAD/Macro/arrangeCnf.json")
+confDir = os.path.dirname(os.path.realpath(__file__))
+plate, extruder = read_conf(os.path.join(confDir, "arrangeCnf.json"))
 
 #TODO
 #Exception Handling
