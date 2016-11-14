@@ -81,7 +81,7 @@ class Plate:
 
         y_max_placed_objs = max(y_max_placed_objs, obj.Shape.BoundBox.YMax)
         #update scan positions
-        self.x_scan_pos = x_scan_pos_next 
+        self.x_scan_pos = x_scan_pos_next
         self.y_scan_pos = max(y_max_placed_objs - (extruder.y_dim - extruder.extrusionPt.y_pos), self.y_scan_pos) #constraint coming from Printer's x-axis bar
 
         return str(obj) + " placed on plate."
@@ -111,9 +111,11 @@ def read_conf(conf_file_name):
     extruder = Extruder(x_dim = extruder_conf["x_dim"], y_dim = extruder_conf["y_dim"], x_pos = extrusion_pt_conf["x_pos"], y_pos = extrusion_pt_conf["y_pos"])
     return (plate, extruder)
 
+def getActiveDoc():
+    return FreeCAD.ActiveDocument
 
-doc = FreeCAD.ActiveDocument
-objs = doc.Objects
+def getSelectedObjs():
+    return FreeCADGui.Selection.getSelectedObjs()
 
 def printObjsBase(objs):
   for obj in objs:
@@ -123,7 +125,7 @@ def printObjsBoundingBox(objs):
     for obj in objs:
         print(obj.Shape.BoundBox)
 
-printObjsBase(objs)
+#printObjsBase(objs)
 confDir = os.path.dirname(os.path.realpath(__file__))
 plate, extruder = read_conf(os.path.join(confDir, "arrangeCnf.json"))
 
