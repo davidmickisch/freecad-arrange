@@ -1,0 +1,14 @@
+{
+  "plate": {
+    "x_dim": 190,
+    "y_dim": 180
+  },
+  "extruder": {
+    "x_dim": 108,
+    "y_dim": 64,
+    "extrusion_pt": {
+      "x_pos": 34,
+      "y_pos": 19
+    }
+  }
+}

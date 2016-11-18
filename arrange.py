@@ -1,5 +1,6 @@
 import FreeCAD
 import os
+import copy
 
 def placeObjsOnPlate(objs):
     for obj in objs:
@@ -111,13 +112,80 @@ def plate_objs(objs, plate, extruder, prefix=None):
     '''Place the objs on a plate.
        If the prefix is given, it's added to the object labels, e.g. "V1","V2" becomes "P1 V1", "P1 V2"
     '''
-    # $$$ needs some feedback from the API to determine which objects were actually placed
-    if prefix:
-        for obj in objs:
-            if not obj.Label.startswith(prefix):
-                obj.Label = prefix + obj.Label
     arrange_objs(objs, plate, extruder)
-    placeObjsOnPlate(objs)
+    placeObjsOnPlate(plate.placed_objs)
+    if prefix:
+        index = 1
+        for obj in plate.placed_objs:
+            if not obj.Label.startswith(prefix):
+                obj.Label = "%s-%d %s" % (prefix, index, obj.Label)
+            index += 1
+    if len(objs) != len(plate.placed_objs):
+        print "Warning: %d objects were not placed" % (len(objs) - len(plate.placed_objs))
+
+def multi_plate_objs(objs, conf_file_name):
+    '''Place objects on multiple plates. Returns array of plates containing placed objects.'''
+    plates = []
+    to_place = copy.copy(objs)
+
+    while len(to_place) > 0:
+        plate, extruder = read_conf(conf_file_name)
+        plate_number = len(plates) + 1
+        plate_objs(to_place, plate, extruder, prefix = "P%d" % plate_number)
+
+        if not plate.placed_objs:
+            print "Error: Couldn't place any object on plate"
+            break
+
+        plates.append(plate)
+
+        for obj in plate.placed_objs:
+            to_place.remove(obj)
+
+    if len(to_place) != 0:
+        print "Warning: %d objects were NOT placed" % len(to_place)
+
+    return plates
+
+# FreeCAD-specific helper functions
+def sorted_by_height(objs, ascending=True):
+    '''Returns new list of FreeCAD objects sorted by bounding box height'''
+    return sorted(objs, key=z_length_key, reverse=not ascending)
+
+def z_length_key(obj):
+    '''Returns object height from bounding box'''
+    return obj.Shape.BoundBox.ZLength
+
+def make_simple_copy(obj, postfix=None):
+    '''Create a simple (non-parametric) copy of the object and return it'''
+    if postfix:
+        newLabel = obj.Label + postfix
+    else:
+        newLabel = obj.Label
+
+    newObj = obj.Document.addObject("Part::Feature", newLabel)
+    newObj.Shape = obj.Shape
+    newObj.Label = newLabel
+    return newObj
+
+def multi_plate_i3_berlin(objs):
+    '''Plates the selected objs to multiple plates inside FreeCAD'''
+    conf_path = os.path.join(confDir, 'i3berlin.json')
+
+    copy_postfix = 'p'
+
+    by_height = sorted_by_height(objs) # make sure the extruder is above existing objects when changing rows
+    to_place = []
+    for obj in by_height:
+        to_place.append(make_simple_copy(obj, postfix=copy_postfix))
+    multi_plate_objs(to_place, conf_path)
+
+    # postfix is no longer necessary
+    for obj in to_place:
+        if obj.Label.endswith(copy_postfix):
+            obj.Label = obj.Label[:-1]
+
+    to_place[0].Document.recompute()
 
 
 doc = FreeCAD.ActiveDocument
