@@ -107,6 +107,18 @@ def read_conf(conf_file_name):
     extruder = Extruder(x_dim = extruder_conf["x_dim"], y_dim = extruder_conf["y_dim"], x_pos = extrusion_pt_conf["x_pos"], y_pos = extrusion_pt_conf["y_pos"])
     return (plate, extruder)
 
+def plate_objs(objs, plate, extruder, prefix=None):
+    '''Place the objs on a plate.
+       If the prefix is given, it's added to the object labels, e.g. "V1","V2" becomes "P1 V1", "P1 V2"
+    '''
+    # $$$ needs some feedback from the API to determine which objects were actually placed
+    if prefix:
+        for obj in objs:
+            if not obj.Label.startswith(prefix):
+                obj.Label = prefix + obj.Label
+    arrange_objs(objs, plate, extruder)
+    placeObjsOnPlate(objs)
+
 
 doc = FreeCAD.ActiveDocument
 objs = doc.Objects
