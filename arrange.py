@@ -56,15 +56,11 @@ class Plate:
         y_max_placed_objs = max(y_bound_placed_objs)
 
         #change x_scan_pos and y_scan_pos if needed
-        x_scan_pos_next = self.x_scan_pos + x_obj_dim
-        if x_scan_pos_next > self.x_dim:
+        # Check if object will fit on this row
+        if self.x_scan_pos + x_obj_dim > self.x_dim:
             # Object doesn't fit on this row, so start a new row
-            self.x_scan_pos = 0
             self.y_scan_pos = y_max_placed_objs + y_row_spacing
-            x_scan_pos_next = 0
-        else:
-            # The next object will be on this row, so add the column spacing
-            x_scan_pos_next += x_column_spacing
+            self.x_scan_pos = 0
 
         #return if obj doesn't fit on plate
         if self.y_scan_pos + y_obj_dim > self.y_dim:
@@ -81,7 +77,7 @@ class Plate:
 
         y_max_placed_objs = max(y_max_placed_objs, obj.Shape.BoundBox.YMax)
         #update scan positions
-        self.x_scan_pos = x_scan_pos_next 
+        self.x_scan_pos += x_obj_dim + x_column_spacing
         self.y_scan_pos = max(y_max_placed_objs - (extruder.y_dim - extruder.extrusionPt.y_pos), self.y_scan_pos) #constraint coming from Printer's x-axis bar
 
         return str(obj) + " placed on plate."
