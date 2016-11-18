@@ -1,4 +1,4 @@
-import FreeCAD
+import FreeCAD, FreeCADGui
 import os
 import copy
 
@@ -187,9 +187,11 @@ def multi_plate_i3_berlin(objs):
 
     to_place[0].Document.recompute()
 
+def getActiveDoc():
+    return FreeCAD.ActiveDocument
 
-doc = FreeCAD.ActiveDocument
-objs = doc.Objects
+def getSelectedObjs():
+    return FreeCADGui.Selection.getSelection()
 
 def printObjsBase(objs):
   for obj in objs:
@@ -199,7 +201,7 @@ def printObjsBoundingBox(objs):
     for obj in objs:
         print(obj.Shape.BoundBox)
 
-printObjsBase(objs)
+#printObjsBase(objs)
 confDir = os.path.dirname(os.path.realpath(__file__))
 plate, extruder = read_conf(os.path.join(confDir, "arrangeCnf.json"))
 
