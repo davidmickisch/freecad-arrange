@@ -1,5 +1,6 @@
-import FreeCAD
+import FreeCAD, FreeCADGui
 import os
+import copy
 
 def placeObjsOnPlate(objs):
     for obj in objs:
@@ -56,15 +57,11 @@ class Plate:
         y_max_placed_objs = max(y_bound_placed_objs)
 
         #change x_scan_pos and y_scan_pos if needed
-        x_scan_pos_next = self.x_scan_pos + x_obj_dim
-        if x_scan_pos_next > self.x_dim:
+        # Check if object will fit on this row
+        if self.x_scan_pos + x_obj_dim > self.x_dim:
             # Object doesn't fit on this row, so start a new row
-            self.x_scan_pos = 0
             self.y_scan_pos = y_max_placed_objs + y_row_spacing
-            x_scan_pos_next = 0
-        else:
-            # The next object will be on this row, so add the column spacing
-            x_scan_pos_next += x_column_spacing
+            self.x_scan_pos = 0
 
         #return if obj doesn't fit on plate
         if self.y_scan_pos + y_obj_dim > self.y_dim:
@@ -81,7 +78,7 @@ class Plate:
 
         y_max_placed_objs = max(y_max_placed_objs, obj.Shape.BoundBox.YMax)
         #update scan positions
-        self.x_scan_pos = x_scan_pos_next
+        self.x_scan_pos += x_obj_dim + x_column_spacing
         self.y_scan_pos = max(y_max_placed_objs - (extruder.y_dim - extruder.extrusionPt.y_pos), self.y_scan_pos) #constraint coming from Printer's x-axis bar
 
         return str(obj) + " placed on plate."
@@ -111,11 +108,90 @@ def read_conf(conf_file_name):
     extruder = Extruder(x_dim = extruder_conf["x_dim"], y_dim = extruder_conf["y_dim"], x_pos = extrusion_pt_conf["x_pos"], y_pos = extrusion_pt_conf["y_pos"])
     return (plate, extruder)
 
+def plate_objs(objs, plate, extruder, prefix=None):
+    '''Place the objs on a plate.
+       If the prefix is given, it's added to the object labels, e.g. "V1","V2" becomes "P1 V1", "P1 V2"
+    '''
+    arrange_objs(objs, plate, extruder)
+    placeObjsOnPlate(plate.placed_objs)
+    if prefix:
+        index = 1
+        for obj in plate.placed_objs:
+            if not obj.Label.startswith(prefix):
+                obj.Label = "%s-%d %s" % (prefix, index, obj.Label)
+            index += 1
+    if len(objs) != len(plate.placed_objs):
+        print "Warning: %d objects were not placed" % (len(objs) - len(plate.placed_objs))
+
+def multi_plate_objs(objs, conf_file_name):
+    '''Place objects on multiple plates. Returns array of plates containing placed objects.'''
+    plates = []
+    to_place = copy.copy(objs)
+
+    while len(to_place) > 0:
+        plate, extruder = read_conf(conf_file_name)
+        plate_number = len(plates) + 1
+        plate_objs(to_place, plate, extruder, prefix = "P%d" % plate_number)
+
+        if not plate.placed_objs:
+            print "Error: Couldn't place any object on plate"
+            break
+
+        plates.append(plate)
+
+        for obj in plate.placed_objs:
+            to_place.remove(obj)
+
+    if len(to_place) != 0:
+        print "Warning: %d objects were NOT placed" % len(to_place)
+
+    return plates
+
+# FreeCAD-specific helper functions
+def sorted_by_height(objs, ascending=True):
+    '''Returns new list of FreeCAD objects sorted by bounding box height'''
+    return sorted(objs, key=z_length_key, reverse=not ascending)
+
+def z_length_key(obj):
+    '''Returns object height from bounding box'''
+    return obj.Shape.BoundBox.ZLength
+
+def make_simple_copy(obj, postfix=None):
+    '''Create a simple (non-parametric) copy of the object and return it'''
+    if postfix:
+        newLabel = obj.Label + postfix
+    else:
+        newLabel = obj.Label
+
+    newObj = obj.Document.addObject("Part::Feature", newLabel)
+    newObj.Shape = obj.Shape
+    newObj.Label = newLabel
+    return newObj
+
+def multi_plate_i3_berlin(objs):
+    '''Plates the selected objs to multiple plates inside FreeCAD'''
+    conf_path = os.path.join(confDir, 'i3berlin.json')
+
+    copy_postfix = 'p'
+
+    by_height = sorted_by_height(objs) # make sure the extruder is above existing objects when changing rows
+    to_place = []
+    for obj in by_height:
+        to_place.append(make_simple_copy(obj, postfix=copy_postfix))
+    multi_plate_objs(to_place, conf_path)
+
+    # postfix is no longer necessary
+    for obj in to_place:
+        if obj.Label.endswith(copy_postfix):
+            obj.Label = obj.Label[:-1]
+
+    to_place[0].Document.recompute()
+
 def getActiveDoc():
     return FreeCAD.ActiveDocument
 
 def getSelectedObjs():
-    return FreeCADGui.Selection.getSelectedObjs()
+    return FreeCADGui.Selection.getSelection()
 
 def printObjsBase(objs):
   for obj in objs:

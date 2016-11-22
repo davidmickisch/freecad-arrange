@@ -19,3 +19,6 @@ The advantages of serial printing printing over parallel printing are the follow
 ![1](doc/IMG-1.JPG)
 ![2](doc/IMG-2.JPG)
 ![3](doc/IMG-3.JPG)
+
+## Credits
+The arrange macro is written by [David Blitz](https://github.com/davidblitz) and [Michael Ang](http://www.michaelang.com/)
