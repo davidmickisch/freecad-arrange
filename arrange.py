@@ -1,4 +1,4 @@
-import FreeCAD, FreeCADGui
+import FreeCAD, FreeCADGui, Draft
 import os
 import copy
 
@@ -30,16 +30,20 @@ class Extruder:
 
 
 class Plate:
-    def __init__(self, x_dim, y_dim):
-        self.x_dim = x_dim
-        self.y_dim = y_dim
-        self.x_scan_pos = 0
-        self.y_scan_pos = 0
+    def __init__(self, x_dim, y_dim, margins):
+        self.margins = margins
+        self.x_dim = x_dim - self.margins["right"]
+        self.y_dim = y_dim - self.margins["back"]
+        self.x_scan_pos = margins["left"]
+        self.y_scan_pos = margins["front"]
         self.placed_objs = []
 
     def __repr__(self):
         return "(Plate) {" + "width: " + str(self.x_dim) + ", depth: " + str(self.y_dim) + "}"
 
+    def viz(self):
+        Draft.makeRectangle(self.x_dim, self.y_dim)
+        
     def place_obj(self, obj, extruder):
         #get relevant information from obj
         bounding_box = obj.Shape.BoundBox
@@ -61,7 +65,7 @@ class Plate:
         if self.x_scan_pos + x_obj_dim > self.x_dim:
             # Object doesn't fit on this row, so start a new row
             self.y_scan_pos = y_max_placed_objs + y_row_spacing
-            self.x_scan_pos = 0
+            self.x_scan_pos = self.margins["left"]
 
         #return if obj doesn't fit on plate
         if self.y_scan_pos + y_obj_dim > self.y_dim:
@@ -104,7 +108,7 @@ def read_conf(conf_file_name):
     extruder_conf = conf_obj["extruder"]
     extrusion_pt_conf = extruder_conf["extrusion_pt"]
 
-    plate = Plate(x_dim = plate_conf["x_dim"], y_dim = plate_conf["y_dim"])
+    plate = Plate(x_dim = plate_conf["x_dim"], y_dim = plate_conf["y_dim"], margins = plate_conf["margins"])
     extruder = Extruder(x_dim = extruder_conf["x_dim"], y_dim = extruder_conf["y_dim"], x_pos = extrusion_pt_conf["x_pos"], y_pos = extrusion_pt_conf["y_pos"])
     return (plate, extruder)
 
@@ -203,7 +207,8 @@ def printObjsBoundingBox(objs):
 
 #printObjsBase(objs)
 confDir = os.path.dirname(os.path.realpath(__file__))
-plate, extruder = read_conf(os.path.join(confDir, "arrangeCnf.json"))
+confFilePath = os.path.join(confDir, "arrangeCnf.json")
+plate, extruder = read_conf(confFilePath)
 
 #TODO
 #Exception Handling
