@@ -31,12 +31,29 @@ class Extruder:
 
 
 class Plate:
-    def __init__(self, x_dim, y_dim, margins):
+    def __init__(self, x_dim, y_dim, dir_det, dirs, margins):
+        self.dir_det = dir_det
+        self.dirs    = dirs
         self.margins = margins
-        self.x_dim = x_dim - self.margins["right"]
-        self.y_dim = y_dim - self.margins["back"]
-        self.x_scan_pos = margins["left"]
-        self.y_scan_pos = margins["front"]
+        dir_set = set(self.dirs.values())
+        if("left-right" in dir_set):
+            self.x_dim   = x_dim - self.margins["right"]
+            self.x_scan_pos = margins["left"]
+            self.x_sign = 1
+        else:
+            self.x_dim   = x_dim - self.margins["right"]
+            self.x_scan_pos = self.x_dim
+            self.x_sign = -1
+
+        if("front-back" in dir_set):
+            self.y_dim   = y_dim - self.margins["back"]
+            self.y_scan_pos = margins["front"]
+            self.y_sign = 1
+        else:
+            self.y_dim = y_dim - self.margins["back"]
+            self.y_scan_pos = self.y_dim 
+            self.y_sign = -1
+           
         self.placed_objs = []
 
     def __repr__(self):
@@ -54,7 +71,11 @@ class Plate:
 
         #determine offsets
         safety_offset = 5
-        x_column_spacing = extruder.extrusionPt.x_pos + safety_offset
+        if self.x_sign == 1:
+            x_column_spacing = extruder.extrusionPt.x_pos + safety_offset
+        else:
+            x_column_spacing = (extruder.x_dim - extruder.extrusionPt.x_pos) + safety_offset
+
         y_row_spacing    = extruder.extrusionPt.y_pos + safety_offset
 
         y_bound_placed_objs = [placed.Shape.BoundBox.YMax for placed in self.placed_objs]
@@ -63,10 +84,15 @@ class Plate:
 
         #change x_scan_pos and y_scan_pos if needed
         # Check if object will fit on this row
-        if self.x_scan_pos + x_obj_dim > self.x_dim:
-            # Object doesn't fit on this row, so start a new row
-            self.y_scan_pos = y_max_placed_objs + y_row_spacing
-            self.x_scan_pos = self.margins["left"]
+        if self.x_sign == 1:
+            if self.x_scan_pos + x_obj_dim > self.x_dim:
+                # Object doesn't fit on this row, so start a new row
+                self.y_scan_pos = y_max_placed_objs + y_row_spacing
+                self.x_scan_pos = self.margins["left"]
+        else:
+            if self.x_scan_pos - x_obj_dim < self.margins["left"]:
+                self.y_scan_pos = y_max_placed_objs + y_row_spacing
+                self.x_scan_pos = self.x_dim
 
         #return if obj doesn't fit on plate
         if self.y_scan_pos + y_obj_dim > self.y_dim:
@@ -84,7 +110,7 @@ class Plate:
         y_max_placed_objs = max(y_max_placed_objs, obj.Shape.BoundBox.YMax)
 
         #update scan positions
-        self.x_scan_pos += x_obj_dim + x_column_spacing
+        self.x_scan_pos += self.x_sign*(x_obj_dim + x_column_spacing)
         if extruder.bar == True:
             self.y_scan_pos = max(y_max_placed_objs - (extruder.y_dim - extruder.extrusionPt.y_pos), self.y_scan_pos) #constraint coming from Printer's x-axis bar  
 
@@ -111,7 +137,7 @@ def read_conf(conf_file_name):
     extruder_conf = conf_obj["extruder"]
     extrusion_pt_conf = extruder_conf["extrusion_pt"]
 
-    plate = Plate(x_dim = plate_conf["x_dim"], y_dim = plate_conf["y_dim"], margins = plate_conf["margins"])
+    plate = Plate(x_dim = plate_conf["x_dim"], y_dim = plate_conf["y_dim"], dir_det=plate_conf["dir_det"], dirs = plate_conf["dirs"], margins = plate_conf["margins"])
     extruder = Extruder(x_dim = extruder_conf["x_dim"], y_dim = extruder_conf["y_dim"], bar = extruder_conf["bar"], x_pos = extrusion_pt_conf["x_pos"], y_pos = extrusion_pt_conf["y_pos"])
     return (plate, extruder)
 

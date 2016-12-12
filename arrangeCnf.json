@@ -2,6 +2,11 @@
   "plate": {
     "x_dim": 200,
     "y_dim": 180,
+    "dir_det": "manual",
+    "dirs": {
+	    "first": "left-right",
+	    "second": "front-back"
+    },
     "margins": {
 	    "front": 5,
 	    "right": 6,
