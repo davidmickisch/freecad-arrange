@@ -18,9 +18,10 @@ class Extruder:
         def __repr__(self):
             return "(Extrusion Point) {" + "xPosition: " + str(self.x_pos) + ", yPosition: " + str(self.y_pos) + "}"
 
-    def __init__(self, x_dim, y_dim, x_pos, y_pos):
+    def __init__(self, x_dim, y_dim, bar, x_pos, y_pos):
         self.x_dim = x_dim
         self.y_dim = y_dim
+        self.bar   = bar
         self.extrusionPt = self.ExtrusionPoint(x_pos, y_pos)
 
     def __repr__(self):
@@ -81,9 +82,11 @@ class Plate:
         self.placed_objs.append(obj)
 
         y_max_placed_objs = max(y_max_placed_objs, obj.Shape.BoundBox.YMax)
+
         #update scan positions
         self.x_scan_pos += x_obj_dim + x_column_spacing
-        self.y_scan_pos = max(y_max_placed_objs - (extruder.y_dim - extruder.extrusionPt.y_pos), self.y_scan_pos) #constraint coming from Printer's x-axis bar
+        if extruder.bar == True:
+            self.y_scan_pos = max(y_max_placed_objs - (extruder.y_dim - extruder.extrusionPt.y_pos), self.y_scan_pos) #constraint coming from Printer's x-axis bar  
 
         return str(obj) + " placed on plate."
 
@@ -109,7 +112,7 @@ def read_conf(conf_file_name):
     extrusion_pt_conf = extruder_conf["extrusion_pt"]
 
     plate = Plate(x_dim = plate_conf["x_dim"], y_dim = plate_conf["y_dim"], margins = plate_conf["margins"])
-    extruder = Extruder(x_dim = extruder_conf["x_dim"], y_dim = extruder_conf["y_dim"], x_pos = extrusion_pt_conf["x_pos"], y_pos = extrusion_pt_conf["y_pos"])
+    extruder = Extruder(x_dim = extruder_conf["x_dim"], y_dim = extruder_conf["y_dim"], bar = extruder_conf["bar"], x_pos = extrusion_pt_conf["x_pos"], y_pos = extrusion_pt_conf["y_pos"])
     return (plate, extruder)
 
 def plate_objs(objs, plate, extruder, prefix=None):

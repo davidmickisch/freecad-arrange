@@ -12,10 +12,10 @@
   "extruder": {
     "x_dim": 108,
     "y_dim": 64,
+    "bar": false,
     "extrusion_pt": {
       "x_pos": 34,
       "y_pos": 19
     }
-  },
-  "bar": true
+  }
 }
