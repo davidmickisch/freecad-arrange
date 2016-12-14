@@ -37,23 +37,28 @@ class Plate:
         self.margins = margins
         dir_set = set(self.dirs.values())
         if("left-right" in dir_set):
-            self.x_dim   = x_dim - self.margins["right"]
+            self.x_dim   = x_dim
             self.x_scan_pos = margins["left"]
             self.x_sign = 1
         else:
-            self.x_dim   = x_dim - self.margins["right"]
-            self.x_scan_pos = self.x_dim
+            self.x_dim   = x_dim
+            self.x_scan_pos = self.x_dim - margins["right"]
             self.x_sign = -1
 
         if("front-back" in dir_set):
-            self.y_dim   = y_dim - self.margins["back"]
+            self.y_dim   = y_dim
             self.y_scan_pos = margins["front"]
             self.y_sign = 1
         else:
-            self.y_dim = y_dim - self.margins["back"]
-            self.y_scan_pos = self.y_dim 
+            self.y_dim = y_dim
+            self.y_scan_pos = self.y_dim  - margins["back"]
             self.y_sign = -1
            
+        if self.dirs["first"] in set(["left-right", "right-left"]):
+            self.first_print_axis = "x"
+        else:
+            self.first_print_axis = "y"
+
         self.placed_objs = []
 
     def __repr__(self):
@@ -76,43 +81,115 @@ class Plate:
         else:
             x_column_spacing = (extruder.x_dim - extruder.extrusionPt.x_pos) + safety_offset
 
-        y_row_spacing    = extruder.extrusionPt.y_pos + safety_offset
+        if self.y_sign == 1:
+            y_row_spacing    = extruder.extrusionPt.y_pos + safety_offset
+        else:
+            y_row_spacing    = (extruder.y_dim - extruder.extrusionPt.y_pos) + safety_offset
 
-        y_bound_placed_objs = [placed.Shape.BoundBox.YMax for placed in self.placed_objs]
-        y_bound_placed_objs.append(0)
-        y_max_placed_objs = max(y_bound_placed_objs)
+        y_max_list_placed_objs = [placed.Shape.BoundBox.YMax for placed in self.placed_objs]
+        y_max_list_placed_objs.append(0)
+        y_max_placed_objs = max(y_max_list_placed_objs)
+
+        y_min_list_placed_objs = [placed.Shape.BoundBox.YMin for placed in self.placed_objs]
+        y_min_list_placed_objs.append(self.y_dim) #append large number
+        y_min_placed_objs = min(y_min_list_placed_objs)
+
+        x_max_list_placed_objs = [placed.Shape.BoundBox.XMax for place in self.placed_objs]
+        x_max_list_placed_objs.append(0)
+        x_max_placed_objs = max(x_max_list_placed_objs)
+
+        x_min_list_placed_objs = [placed.Shape.BoundBox.XMin for place in self.placed_objs]
+        x_min_list_placed_objs.append(self.x_dim) #append large number
+        x_min_placed_objs = min(x_min_list_placed_objs)
 
         #change x_scan_pos and y_scan_pos if needed
         # Check if object will fit on this row
-        if self.x_sign == 1:
-            if self.x_scan_pos + x_obj_dim > self.x_dim:
-                # Object doesn't fit on this row, so start a new row
-                self.y_scan_pos = y_max_placed_objs + y_row_spacing
-                self.x_scan_pos = self.margins["left"]
-        else:
-            if self.x_scan_pos - x_obj_dim < self.margins["left"]:
-                self.y_scan_pos = y_max_placed_objs + y_row_spacing
-                self.x_scan_pos = self.x_dim
+        if self.first_print_axis == "x":
+            if self.x_sign == 1:
+                if self.x_scan_pos + x_obj_dim > self.x_dim - self.margins["right"]:
+                    # Object doesn't fit on this row, so start a new row
+                    if self.y_sign == 1:
+                        self.y_scan_pos = y_max_placed_objs + y_row_spacing
+                    else:
+                        self.y_scan_pos = y_min_placed_objs - y_row_spacing
 
-        #return if obj doesn't fit on plate
-        if self.y_scan_pos + y_obj_dim > self.y_dim:
-            return "Error: " + str(obj) + "doesn't fit on plate!"
+                    self.x_scan_pos = self.margins["left"]
+            else:
+                if self.x_scan_pos - x_obj_dim < self.margins["left"]:
+                    #Object doesn't fit on this row, so start a new row
+                    if self.y_sign == 1:
+                        self.y_scan_pos = y_max_placed_objs + y_row_spacing
+                    else:
+                        self.y_scan_pos = y_min_placed_objs - y_row_spacing
+
+                    self.x_scan_pos = self.x_dim - self.margins["right"]
+
+            #return if obj doesn't fit on plate
+            if self.y_sign == 1:
+                if self.y_scan_pos + y_obj_dim > self.y_dim - self.margins["back"]:
+                    return "Error: " + str(obj) + "doesn't fit on plate!"
+            else:
+                if self.y_scan_pos - y_obj_dim < self.margins["front"]:
+                    return "Error: " + str(obj) + "doesn't fit on plate!"
+
+        if self.first_print_axis == "y":
+            if self.y_sign == 1:
+                if self.y_scan_pos + y_obj_dim > self.y_dim - self.margins["back"]:
+                    #Object doesn't fit on this column, so start a new column
+                    if self.x_sign == 1:
+                        self.x_scan_pos = x_max_placed_objs + x_column_spacing
+                    else:
+                        self.x_scan_pos = x_min_placed_objs - x_column_spacing
+                
+                    self.y_scan_pos = self.margins["front"]
+            else:
+                if self.y_scan_pos - y_obj_dim < self.margins["front"]:
+                    #Object doesn't fit on this column, so start a new column
+                    if self.x_sign == 1:
+                        self.x_scan_pos = x_max_placed_objs + x_column_spacing
+                    else:
+                        self.x_scan_pos = x_min_placed_objs - x_column_spacing
+                
+                    self.y_scan_pos = self.margins["back"]
+ 
+            #return if obj doesn't fit on plate
+            if self.x_sign == 1:
+                if self.x_scan_pos + x_obj_dim > self.x_dim - self.margins["right"]:
+                    return "Error: " + str(obj) + "doesn't fit on plate!"
+            else:
+                if self.y_scan_pos - y_obj_dim < self.margins["left"]:
+                    return "Error: " + str(obj) + "doesn't fit on plate!"
 
         #place obj by translating
-        x_min_obj = bounding_box.XMin
-        y_min_obj = bounding_box.YMin
-        x_transl = self.x_scan_pos - x_min_obj
-        y_transl = self.y_scan_pos - y_min_obj
+        if self.x_sign == 1:
+            x_obj = bounding_box.XMin
+        else:
+            x_obj = bounding_box.XMax
+
+        if self.y_sign == 1:
+            y_obj = bounding_box.YMin
+        else:
+            y_obj = bounding_box.YMax
+
+        x_transl = self.x_scan_pos - x_obj
+        y_transl = self.y_scan_pos - y_obj
         obj.Placement.Base = FreeCAD.Vector(base.x + x_transl, base.y + y_transl, base.z)
 
         self.placed_objs.append(obj)
 
         y_max_placed_objs = max(y_max_placed_objs, obj.Shape.BoundBox.YMax)
+        y_min_placed_objs = min(y_min_placed_objs, obj.Shape.BoundBox.YMin)
+
+        x_max_placed_objs = max(x_max_placed_objs, obj.Shape.BoundBox.XMax)
+        x_min_placed_objs = min(x_min_placed_objs, obj.Shape.BoundBox.XMin)
 
         #update scan positions
-        self.x_scan_pos += self.x_sign*(x_obj_dim + x_column_spacing)
-        if extruder.bar == True:
-            self.y_scan_pos = max(y_max_placed_objs - (extruder.y_dim - extruder.extrusionPt.y_pos), self.y_scan_pos) #constraint coming from Printer's x-axis bar  
+        if self.first_print_axis == "x":
+            self.x_scan_pos += self.x_sign*(x_obj_dim + x_column_spacing)
+            if extruder.bar == True:
+                self.y_scan_pos = max(y_max_placed_objs - (extruder.y_dim - extruder.extrusionPt.y_pos), self.y_scan_pos) #constraint coming from Printer's x-axis bar  
+        else:
+            self.y_scan_pos += self.y_sign*(y_obj_dim + y_row_spacing)
 
         return str(obj) + " placed on plate."
 
@@ -243,3 +320,4 @@ plate, extruder = read_conf(confFilePath)
 #Exception Handling
 #Clear Objs
 #do testing (e.g. for connectors)
+#rollback and make new branch
