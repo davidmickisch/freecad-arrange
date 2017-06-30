@@ -32,12 +32,73 @@ class Extruder:
 class Plate:
     def __init__(self, x_dim, y_dim, margins):
         self.margins = margins
-        self.x_dim = x_dim - self.margins["right"]
-        self.y_dim = y_dim - self.margins["back"]
-        self.x_scan_pos = margins["left"]
-        self.y_scan_pos = margins["front"]
+        
+        self.x_dim = x_dim 
+        self.y_dim = y_dim
+        
+        self.set_margins()
+        
+        self.x_scan_pos = self.x_start_scan
+        self.y_scan_pos = self.y_start_scan
+        
         self.placed_objs = []
 
+    def set_margins(self):
+        self.x_start_scan = margins["left"]
+        self.y_start_scan = margins["front"]
+        
+        self.effective_x_dim = x_dim - self.margins["right"]
+        self.effective_y_dim = y_dim - self.margins["back"]
+        
+    def move_plate_center_to_origin(self):
+        center_x = x_dim/float(2)
+        center_y = y_dim/float(2)
+        
+        self.effective_x_dim -= center_x
+        self.effective_y_dim -= center_y
+        
+        self.x_start_scan -= center_x
+        self.y_start_scan -= center_y
+    
+    def flip_x_y(self):
+        self.margins["left"], self.margins["front"] = (self.margins["left"], self.margins["front"])
+        self.margins["right"], self.margins["back"] = (self.margins["right"], self.margins["back"])
+        
+    def flip_x(self):
+        self.margins["left"], self.margins["right"] = (self.margins["left"], self.margins["right"])
+    
+    def flip_y(self):
+        self.margins["front"], self.margins["back"] = (self.margins["front"], self.margins["back"])
+        
+    def reflection_matrix(self, print_direction):
+        return [[print_direction.first.x, print_direction.second.x],
+                [print_direction.first.y, print_direction.second.y]]
+                
+    def reflect_plate_according_to_print_directions(self, print_direction):
+        if(print_direction.first.x == 0):
+            self.flip_x_y()
+            coefficients = [print_direction.first.y, print_direction.second.x]
+        else:
+            coefficients.first = [print_direction.first.x, print_direction.second.y]
+        
+        if(coefficients[0] == -1) self.flip_x()
+        if(coefficients[1] == -1) self.flip_y()
+        
+        self.set_margins()
+        
+        #b = self.center_translation()
+        A = self.reflection_matrix(print_direction)
+        
+        transform = FreeCAD.Base.Matrix(A[0, 0], A[0, 1], 0, 0, 
+                                        A[1, 0], A[1, 1], 0, 0,
+                                        0,       0,       1, 0,
+                                        0,       0,       0,  1
+                                        )
+        
+        for obj in placed_objs:
+            #reflect object according to print_direction
+            obj.Placement = obj.Placement.toMatrix().multiply(transform)
+            
     def __repr__(self):
         return "(Plate) {" + "width: " + str(self.x_dim) + ", depth: " + str(self.y_dim) + "}"
 
@@ -62,13 +123,13 @@ class Plate:
 
         #change x_scan_pos and y_scan_pos if needed
         # Check if object will fit on this row
-        if self.x_scan_pos + x_obj_dim > self.x_dim:
+        if self.x_scan_pos + x_obj_dim > self.effective_x_dim:
             # Object doesn't fit on this row, so start a new row
             self.y_scan_pos = y_max_placed_objs + y_row_spacing
-            self.x_scan_pos = self.margins["left"]
+            self.x_scan_pos = self.x_start_scan
 
         #return if obj doesn't fit on plate
-        if self.y_scan_pos + y_obj_dim > self.y_dim:
+        if self.y_scan_pos + y_obj_dim > self.effective_y_dim:
             return "Error: " + str(obj) + "doesn't fit on plate!"
 
         #place obj by translating
