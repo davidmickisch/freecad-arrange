@@ -3,11 +3,20 @@
     "x_dim": 200,
     "y_dim": 180,
     "margins": {
-	    "front": 5,
-	    "right": 6,
-	    "back" : 7,
-	    "left" : 8
-    }
+	    "front": 0,
+	    "right": 0,
+	    "back" : 0,
+	    "left" : 0
+    },
+    "print_directions" : 
+      {"first" :
+        {"start" : "back",
+         "end" : "left"},
+        "second" : 
+        {"start" : "right",
+         "end" : "back"}
+      },
+    "bar" : false
   },
   "extruder": {
     "x_dim": 108,

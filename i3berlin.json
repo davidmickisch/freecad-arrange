@@ -1,7 +1,17 @@
 {
   "plate": {
     "x_dim": 190,
-    "y_dim": 180
+    "y_dim": 180,
+    "print_directions" : 
+      {"first" :
+        {"start" : "right",
+         "end" : "left"},
+        "second" : 
+        {"start" : "front",
+         "end" : "back"}
+      },
+    "bar" : true
+        
   },
   "extruder": {
     "x_dim": 108,
