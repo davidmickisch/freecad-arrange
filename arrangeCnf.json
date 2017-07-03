@@ -3,18 +3,18 @@
     "x_dim": 200,
     "y_dim": 180,
     "margins": {
-	    "front": 0,
-	    "right": 0,
-	    "back" : 0,
-	    "left" : 0
+	    "front": 10,
+	    "right": 20,
+	    "back" : 10,
+	    "left" : 20
     },
     "print_directions" : 
       {"first" :
-        {"start" : "back",
-         "end" : "left"},
+        {"from" : "back",
+         "to" : "front"},
         "second" : 
-        {"start" : "right",
-         "end" : "back"}
+        {"from" : "right",
+         "to" : "left"}
       },
     "bar" : false
   },

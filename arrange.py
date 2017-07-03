@@ -75,13 +75,13 @@ class Plate:
         self.margins["front"], self.margins["back"] = (self.margins["back"], self.margins["front"])
     
     def direction_to_vec(self, direction):
-        if(direction["start"] == "right"):
+        if(direction["from"] == "right"):
             return [-1, 0]
-        if(direction["start"] == "left"):
+        if(direction["from"] == "left"):
             return [1, 0]
-        if(direction["start"] == "front"):
+        if(direction["from"] == "front"):
             return [0, 1]
-        if(direction["start"] == "back"):
+        if(direction["from"] == "back"):
             return [0, -1]
             
     def directions_to_matrix(self, print_directions):
