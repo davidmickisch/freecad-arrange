@@ -18,9 +18,10 @@ class Extruder:
         def __repr__(self):
             return "(Extrusion Point) {" + "xPosition: " + str(self.x_pos) + ", yPosition: " + str(self.y_pos) + "}"
 
-    def __init__(self, x_dim, y_dim, x_pos, y_pos):
+    def __init__(self, x_dim, y_dim, bar, x_pos, y_pos):
         self.x_dim = x_dim
         self.y_dim = y_dim
+        self.bar   = bar
         self.extrusionPt = self.ExtrusionPoint(x_pos, y_pos)
 
     def __repr__(self):
@@ -52,17 +53,7 @@ class Plate:
         
         self.effective_x_dim = self.x_dim - self.margins["right"]
         self.effective_y_dim = self.y_dim - self.margins["back"]
-        
-    """def move_plate_center_to_origin(self):
-        center_x = x_dim/float(2)
-        center_y = y_dim/float(2)
-        
-        self.effective_x_dim -= center_x
-        self.effective_y_dim -= center_y
-        
-        self.x_start_scan -= center_x
-        self.y_start_scan -= center_y
-    """
+
     def flip_x_y(self):
         self.margins["left"], self.margins["front"] = (self.margins["front"], self.margins["left"])
         self.margins["right"], self.margins["back"] = (self.margins["back"], self.margins["right"])
@@ -98,13 +89,6 @@ class Plate:
 
         x_transl = 0
         y_transl = 0
-
-        if(self.reflection_matrix[0][0] == 0):
-#            coefficients = [self.reflection_matrix[1][0], self.reflection_matrix[0][1]] 
-            self.flip_x_y()
-
-#        else:
-#            coefficients = [self.reflection_matrix[0][0], self.reflection_matrix[1][1]]
         
         if(self.reflection_matrix[0][0] == -1):
             self.flip_x()
@@ -128,7 +112,6 @@ class Plate:
         if(self.reflection_matrix[1][1] == -1):
             y_transl = self.y_dim
 
-        #b = self.center_translation()
         A = self.reflection_matrix
         
         transform = FreeCAD.Base.Matrix(A[0][0], A[0][1], 0, 0, 
@@ -139,20 +122,15 @@ class Plate:
         
         for obj in self.placed_objs:
             #reflect object according to print_direction
-            #obj.Placement.move(w)
             bb = obj.Shape.BoundBox
             old_center = [(bb.XMax + bb.XMin) / float(2), (bb.YMax + bb.YMin) / float(2)]
             tmp_center = [A[0][0]*old_center[0] + A[0][1]*old_center[1], 
                           A[1][0]*old_center[0] + A[1][1]*old_center[1]]
 
-            #old_x_dim = A[0][0] * self.x_dim + A[0][1] * self.y_dim
-            #old_y_dim = A[1][0] * self.x_dim + A[1][1] * self.y_dim
-
             new_center = [tmp_center[0] - old_center[0] + x_transl, tmp_center[1] - old_center[1] + y_transl]
             tmp_center[0] = 0
             tmp_center[1] = 0
-            #new_center = tmp_center
-            #obj.Placement.move(v)
+
             if A[0][0] == 0:
                 obj.Placement.Rotation = obj.Placement.Rotation.multiply(FreeCAD.Base.Rotation(FreeCAD.Base.Vector(0, 0, 1), 90))            
                 bb = obj.Shape.BoundBox
@@ -162,11 +140,6 @@ class Plate:
             y_t = new_center[1] - tmp_center[1]
 
             obj.Placement.move(FreeCAD.Vector(x_t, y_t, 0))
-
-            #n = obj.Placement.Rotation.toEuler()
-            
-            #obj.Placement = n
-	    
             
     def __repr__(self):
         return "(Plate) {" + "width: " + str(self.x_dim) + ", depth: " + str(self.y_dim) + "}"
@@ -183,12 +156,31 @@ class Plate:
 
         #determine offsets
         safety_offset = 5
-        x_column_spacing = extruder.extrusionPt.x_pos + safety_offset
-        y_row_spacing    = extruder.extrusionPt.y_pos + safety_offset
+        if self.x_sign == 1:
+            x_column_spacing = extruder.extrusionPt.x_pos + safety_offset
+        else:
+            x_column_spacing = (extruder.x_dim - extruder.extrusionPt.x_pos) + safety_offset
 
-        y_bound_placed_objs = [placed.Shape.BoundBox.YMax for placed in self.placed_objs]
-        y_bound_placed_objs.append(0)
-        y_max_placed_objs = max(y_bound_placed_objs)
+        if self.y_sign == 1:
+            y_row_spacing    = extruder.extrusionPt.y_pos + safety_offset
+        else:
+            y_row_spacing    = (extruder.y_dim - extruder.extrusionPt.y_pos) + safety_offset
+
+        y_max_list_placed_objs = [placed.Shape.BoundBox.YMax for placed in self.placed_objs]
+        y_max_list_placed_objs.append(0)
+        y_max_placed_objs = max(y_max_list_placed_objs)
+
+        y_min_list_placed_objs = [placed.Shape.BoundBox.YMin for placed in self.placed_objs]
+        y_min_list_placed_objs.append(self.y_dim) #append large number
+        y_min_placed_objs = min(y_min_list_placed_objs)
+
+        x_max_list_placed_objs = [placed.Shape.BoundBox.XMax for place in self.placed_objs]
+        x_max_list_placed_objs.append(0)
+        x_max_placed_objs = max(x_max_list_placed_objs)
+
+        x_min_list_placed_objs = [placed.Shape.BoundBox.XMin for place in self.placed_objs]
+        x_min_list_placed_objs.append(self.x_dim) #append large number
+        x_min_placed_objs = min(x_min_list_placed_objs)
 
         #change x_scan_pos and y_scan_pos if needed
         # Check if object will fit on this row
@@ -202,21 +194,34 @@ class Plate:
             return "Error: " + str(obj) + "doesn't fit on plate!"
 
         #place obj by translating
-        x_min_obj = bounding_box.XMin
-        y_min_obj = bounding_box.YMin
-        x_transl = self.x_scan_pos - x_min_obj
-        y_transl = self.y_scan_pos - y_min_obj
+        if self.x_sign == 1:
+            x_obj = bounding_box.XMin
+        else:
+            x_obj = bounding_box.XMax
+
+        if self.y_sign == 1:
+            y_obj = bounding_box.YMin
+        else:
+            y_obj = bounding_box.YMax
+
+        x_transl = self.x_scan_pos - x_obj
+        y_transl = self.y_scan_pos - y_obj
         obj.Placement.Base = FreeCAD.Vector(base.x + x_transl, base.y + y_transl, base.z)
 
         self.placed_objs.append(obj)
 
         y_max_placed_objs = max(y_max_placed_objs, obj.Shape.BoundBox.YMax)
+        y_min_placed_objs = min(y_min_placed_objs, obj.Shape.BoundBox.YMin)
+
+        x_max_placed_objs = max(x_max_placed_objs, obj.Shape.BoundBox.XMax)
+        x_min_placed_objs = min(x_min_placed_objs, obj.Shape.BoundBox.XMin)
+
         #update scan positions
         self.x_scan_pos += x_obj_dim + x_column_spacing
 	    
         if(self.bar == True):
             self.y_scan_pos = max(y_max_placed_objs - (extruder.y_dim - extruder.extrusionPt.y_pos), self.y_scan_pos) #constraint coming from Printer's x-axis bar
-
+          
         return str(obj) + " placed on plate."
 
 def arrange_objs(objs, plate, extruder):
@@ -229,10 +234,10 @@ def arrange_objs(objs, plate, extruder):
 
         #maybe return objects that couldn't be placed
         if ret_str[-1] == "!":
-            #plate.reflect_plate_according_to_print_directions()
+            plate.reflect_plate_according_to_print_directions()
             return
 
-#    plate.reflect_plate_according_to_print_directions()
+    plate.reflect_plate_according_to_print_directions()
 
 def read_conf(conf_file_name):
     import json
@@ -247,7 +252,7 @@ def read_conf(conf_file_name):
 
     plate = Plate(x_dim = plate_conf["x_dim"], y_dim = plate_conf["y_dim"], margins = plate_conf["margins"], print_directions = plate_conf["print_directions"], bar = plate_conf["bar"])
     extruder = Extruder(x_dim = extruder_conf["x_dim"], y_dim = extruder_conf["y_dim"], x_pos = extrusion_pt_conf["x_pos"], y_pos = extrusion_pt_conf["y_pos"])
-    
+ 
     return (plate, extruder)
 
 def plate_objs(objs, plate, extruder, prefix=None):
