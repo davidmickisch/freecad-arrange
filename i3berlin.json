@@ -1,18 +1,17 @@
 {
   "plate": {
-    "x_dim": 200,
+    "x_dim": 190,
     "y_dim": 180,
-    "dir_det": "manual",
-    "dirs": {
-	    "first": "left-right",
-	    "second": "front-back"
-    },
-    "margins": {
-	    "front": 5,
-	    "right": 6,
-	    "back" : 7,
-	    "left" : 8
-    }
+    "print_directions" : 
+      {"first" :
+        {"start" : "right",
+         "end" : "left"},
+        "second" : 
+        {"start" : "front",
+         "end" : "back"}
+      },
+    "bar" : true
+        
   },
   "extruder": {
     "x_dim": 108,

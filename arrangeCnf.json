@@ -8,11 +8,20 @@
 	    "second": "front-back"
     },
     "margins": {
-	    "front": 5,
-	    "right": 6,
-	    "back" : 7,
-	    "left" : 8
-    }
+	    "front": 0,
+	    "right": 10,
+	    "back" : 0,
+	    "left" : 10
+    },
+    "print_directions" : 
+      {"first" :
+        {"from" : "right",
+         "to" : "front"},
+        "second" : 
+        {"from" : "front",
+         "to" : "left"}
+      },
+    "bar" : false
   },
   "extruder": {
     "x_dim": 108,
