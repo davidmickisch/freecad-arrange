@@ -99,23 +99,25 @@ class Plate:
         x_transl = 0
         y_transl = 0
 
-        rotate_objs = False
-
         if(self.reflection_matrix[0][0] == 0):
-            coefficients = [self.reflection_matrix[1][0], self.reflection_matrix[0][1]]
-            rotate_objs = True
+#            coefficients = [self.reflection_matrix[1][0], self.reflection_matrix[0][1]] 
             self.flip_x_y()
 
-        else:
-            coefficients = [self.reflection_matrix[0][0], self.reflection_matrix[1][1]]
+#        else:
+#            coefficients = [self.reflection_matrix[0][0], self.reflection_matrix[1][1]]
         
-        if(coefficients[0] == -1):
+        if(self.reflection_matrix[0][0] == -1):
             self.flip_x()
-        if(coefficients[1] == -1):
+        if(self.reflection_matrix[0][1] == -1):
             self.flip_y()
-        
+        if(self.reflection_matrix[1][0] == -1):
+            self.flip_x()
+        if(self.reflection_matrix[1][1] == -1):
+            self.flip_y()
+
         self.set_margins()
-        
+        self.x_scan_pos = self.x_start_scan
+        self.y_scan_pos = self.y_start_scan
  
         if(self.reflection_matrix[0][0] == -1):
             x_transl = self.x_dim
@@ -146,12 +148,15 @@ class Plate:
             #old_x_dim = A[0][0] * self.x_dim + A[0][1] * self.y_dim
             #old_y_dim = A[1][0] * self.x_dim + A[1][1] * self.y_dim
 
-            new_center = [tmp_center[0] + x_transl, tmp_center[1] + y_transl]
+            new_center = [tmp_center[0] - old_center[0] + x_transl, tmp_center[1] - old_center[1] + y_transl]
+            tmp_center[0] = 0
+            tmp_center[1] = 0
             #new_center = tmp_center
             #obj.Placement.move(v)
-            obj.Placement.Rotation = obj.Placement.Rotation.multiply(FreeCAD.Base.Rotation(FreeCAD.Base.Vector(0, 0, 1), 90))            
-            bb = obj.Shape.BoundBox
-            tmp_center = [(bb.XMax + bb.XMin) / float(2), (bb.YMax + bb.YMin) / float(2)]
+            if A[0][0] == 0:
+                obj.Placement.Rotation = obj.Placement.Rotation.multiply(FreeCAD.Base.Rotation(FreeCAD.Base.Vector(0, 0, 1), 90))            
+                bb = obj.Shape.BoundBox
+                tmp_center = [(bb.XMax + bb.XMin) / float(2) - old_center[0], (bb.YMax + bb.YMin) / float(2) - old_center[1]]
 
             x_t = new_center[0] - tmp_center[0]
             y_t = new_center[1] - tmp_center[1]
@@ -224,7 +229,7 @@ def arrange_objs(objs, plate, extruder):
 
         #maybe return objects that couldn't be placed
         if ret_str[-1] == "!":
-            plate.reflect_plate_according_to_print_directions()
+            #plate.reflect_plate_according_to_print_directions()
             return
 
 #    plate.reflect_plate_according_to_print_directions()
@@ -347,3 +352,4 @@ plate, extruder = read_conf(confFilePath)
 #Exception Handling
 #Clear Objs
 #do testing (e.g. for connectors)
+#make margins work
