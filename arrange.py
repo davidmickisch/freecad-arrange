@@ -18,17 +18,13 @@ class Extruder:
         def __repr__(self):
             return "(Extrusion Point) {" + "xPosition: " + str(self.x_pos) + ", yPosition: " + str(self.y_pos) + "}"
 
-    def __init__(self, x_dim, y_dim, bar, x_pos, y_pos):
+    def __init__(self, x_dim, y_dim, x_pos, y_pos):
         self.x_dim = x_dim
         self.y_dim = y_dim
-        self.bar   = bar
         self.extrusionPt = self.ExtrusionPoint(x_pos, y_pos)
 
     def __repr__(self):
         return "(Extruder) {"  + "width: " + str(self.x_dim) + ", depth: " + str(self.y_dim) + ", " + str(self.extrusionPt) + "}"
-
-
-
 
 class Plate:
     def __init__(self, x_dim, y_dim, margins, print_directions, bar):
@@ -156,31 +152,12 @@ class Plate:
 
         #determine offsets
         safety_offset = 5
-        if self.x_sign == 1:
-            x_column_spacing = extruder.extrusionPt.x_pos + safety_offset
-        else:
-            x_column_spacing = (extruder.x_dim - extruder.extrusionPt.x_pos) + safety_offset
-
-        if self.y_sign == 1:
-            y_row_spacing    = extruder.extrusionPt.y_pos + safety_offset
-        else:
-            y_row_spacing    = (extruder.y_dim - extruder.extrusionPt.y_pos) + safety_offset
+        x_column_spacing = extruder.extrusionPt.x_pos + safety_offset
+        y_row_spacing = extruder.extrusionPt.y_pos + safety_offset
 
         y_max_list_placed_objs = [placed.Shape.BoundBox.YMax for placed in self.placed_objs]
         y_max_list_placed_objs.append(0)
         y_max_placed_objs = max(y_max_list_placed_objs)
-
-        y_min_list_placed_objs = [placed.Shape.BoundBox.YMin for placed in self.placed_objs]
-        y_min_list_placed_objs.append(self.y_dim) #append large number
-        y_min_placed_objs = min(y_min_list_placed_objs)
-
-        x_max_list_placed_objs = [placed.Shape.BoundBox.XMax for place in self.placed_objs]
-        x_max_list_placed_objs.append(0)
-        x_max_placed_objs = max(x_max_list_placed_objs)
-
-        x_min_list_placed_objs = [placed.Shape.BoundBox.XMin for place in self.placed_objs]
-        x_min_list_placed_objs.append(self.x_dim) #append large number
-        x_min_placed_objs = min(x_min_list_placed_objs)
 
         #change x_scan_pos and y_scan_pos if needed
         # Check if object will fit on this row
@@ -194,15 +171,8 @@ class Plate:
             return "Error: " + str(obj) + "doesn't fit on plate!"
 
         #place obj by translating
-        if self.x_sign == 1:
-            x_obj = bounding_box.XMin
-        else:
-            x_obj = bounding_box.XMax
-
-        if self.y_sign == 1:
-            y_obj = bounding_box.YMin
-        else:
-            y_obj = bounding_box.YMax
+        x_obj = bounding_box.XMin
+        y_obj = bounding_box.YMin
 
         x_transl = self.x_scan_pos - x_obj
         y_transl = self.y_scan_pos - y_obj
@@ -211,11 +181,7 @@ class Plate:
         self.placed_objs.append(obj)
 
         y_max_placed_objs = max(y_max_placed_objs, obj.Shape.BoundBox.YMax)
-        y_min_placed_objs = min(y_min_placed_objs, obj.Shape.BoundBox.YMin)
-
-        x_max_placed_objs = max(x_max_placed_objs, obj.Shape.BoundBox.XMax)
-        x_min_placed_objs = min(x_min_placed_objs, obj.Shape.BoundBox.XMin)
-
+        
         #update scan positions
         self.x_scan_pos += x_obj_dim + x_column_spacing
 	    
