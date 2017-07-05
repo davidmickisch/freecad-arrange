@@ -1,0 +1,26 @@
+{
+  "plate": {
+    "x_dim": 300,
+    "y_dim": 200,
+    "dir_det": "manual",
+    "dirs": {
+	    "first": "right-left",
+	    "second": "front-back"
+    },
+    "margins": {
+	    "front": 5,
+	    "right": 5,
+	    "back" : 5,
+	    "left" : 5
+    }
+  },
+  "extruder": {
+    "x_dim": 108,
+    "y_dim": 64,
+    "bar": false,
+    "extrusion_pt": {
+      "x_pos": 34,
+      "y_pos": 19
+    }
+  }
+}
