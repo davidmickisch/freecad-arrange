@@ -281,9 +281,12 @@ def make_simple_copy(obj, postfix=None):
     newObj.Label = newLabel
     return newObj
 
-def multi_plate_i3_berlin(objs):
-    '''Plates the selected objs to multiple plates inside FreeCAD'''
-    conf_path = os.path.join(confDir, 'i3berlin.json')
+def multi_plate_copies(objs, conf_file_name):
+    '''Plates the selected objs to multiple plates inside FreeCAD.
+       Sorts the objects by height to avoid collisions when changing
+       rows.
+    '''
+    conf_path = os.path.join(confDir, conf_file_name)
 
     copy_postfix = 'p'
 
@@ -299,6 +302,9 @@ def multi_plate_i3_berlin(objs):
             obj.Label = obj.Label[:-1]
 
     to_place[0].Document.recompute()
+
+def multi_plate_i3_berlin(objs):
+    multi_plate_copies(objs, conf_file_name = 'i3berlin.json')
 
 def getActiveDoc():
     return FreeCAD.ActiveDocument
