@@ -4,8 +4,8 @@
     "y_dim":180,
     "print_directions":{
       "first":{
-        "from":"right",
-        "to":"left"
+        "from":"left",
+        "to":"right"
       },
       "second":{
         "from":"front",
