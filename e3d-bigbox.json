@@ -1,26 +1,33 @@
 {
-  "plate": {
-    "x_dim": 300,
-    "y_dim": 200,
-    "dir_det": "manual",
-    "dirs": {
-	    "first": "right-left",
-	    "second": "front-back"
+  "plate":{
+    "x_dim":300,
+    "y_dim":200,
+    "dir_det":"manual",
+    "margins":{
+      "front":5,
+      "right":5,
+      "back":5,
+      "left":5
     },
-    "margins": {
-	    "front": 5,
-	    "right": 5,
-	    "back" : 5,
-	    "left" : 5
-    }
+    "print_directions":{
+      "first":{
+        "from":"right",
+        "to":"front"
+      },
+      "second":{
+        "from":"front",
+        "to":"left"
+      }
+    },
+    "bar":false
   },
-  "extruder": {
-    "x_dim": 108,
-    "y_dim": 64,
-    "bar": false,
-    "extrusion_pt": {
-      "x_pos": 34,
-      "y_pos": 19
+  "extruder":{
+    "x_dim":108,
+    "y_dim":64,
+    "bar":false,
+    "extrusion_pt":{
+      "x_pos":34,
+      "y_pos":29
     }
   }
 }
